@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import streamlit as st
 import whisper
@@ -22,6 +21,11 @@ def save_transcription(text: str, audio_filename: str):
 # Função principal do aplicativo
 def main():
     st.subheader("Transcrição de Áudio para Texto")
+
+    # Verificação do estado de sessão para saber se a transcrição foi realizada
+    if "transcription" not in st.session_state:
+        st.session_state.transcription = None
+        st.session_state.transcription_filename = None
 
     # Upload do arquivo de áudio
     uploaded_file = st.file_uploader("Escolha um arquivo de áudio (.mp3)", type=["mp3"])
@@ -48,24 +52,21 @@ def main():
                 text_extracted = whisper_get_text(temp_audio_path)
             st.write("Texto transcrito com sucesso!")
 
-            # Verificar se a transcrição já foi salva e exibida
-            if "transcription_saved" not in st.session_state:
-                st.session_state.transcription_saved = False
+            # Salvar a transcrição como arquivo .txt
+            txt_filename = save_transcription(text_extracted, uploaded_file.name)
+            st.session_state.transcription = text_extracted
+            st.session_state.transcription_filename = txt_filename
+            st.success(f"Transcrição salva como {txt_filename}")
 
-            # Salvar a transcrição como arquivo .txt, se ainda não foi salva
-            if not st.session_state.transcription_saved:
-                txt_filename = save_transcription(text_extracted, uploaded_file.name)
-                st.session_state.transcription_saved = True
-                st.success(f"Transcrição salva como {txt_filename}")
+        # Mostrar transcrição na página, se checkbox estiver marcado
+        if show_transcription and st.session_state.transcription:
+            st.write("Transcrição do Áudio:")
+            st.write(st.session_state.transcription)
 
-                # Botão para fazer download do arquivo .txt
-                with open(txt_filename, "r", encoding="utf-8") as txt_file:
-                    st.download_button(f"Baixar Transcrição: {txt_filename}", txt_file, file_name=txt_filename)
-
-            # Mostrar transcrição na página, se checkbox estiver marcado
-            if show_transcription:
-                st.write("Transcrição do Áudio:")
-                st.write(text_extracted)
+        # Botão para fazer download do arquivo .txt, se a transcrição existir
+        if st.session_state.transcription_filename:
+            with open(st.session_state.transcription_filename, "r", encoding="utf-8") as txt_file:
+                st.download_button(f"Baixar Transcrição: {st.session_state.transcription_filename}", txt_file, file_name=st.session_state.transcription_filename)
 
     else:
         st.write("Por favor, carregue um arquivo de áudio.")
